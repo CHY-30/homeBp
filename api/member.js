@@ -1,5 +1,7 @@
 import express from "express";
 import pool from "../db/pool.js";
+import jwt from 'jsonwebtoken';
+const SECRET_KEY = "ABCD_key"
 
 const router = express.Router();
 
@@ -38,9 +40,13 @@ const router = express.Router();
     });
     
   
-    //2. 글 리스트
-    router.get('/', async (req, res) => {
+    //3. 로그인
+    router.post('/login', async (req, res) => {
     try {
+        const {userId, userPw} = req.body;
+
+        const sql = "SELECT userId, userName, userPw FROM member where userId = ?";
+
         const [rows] = await pool.query("SELECT * FROM board");
         res.json(rows);
     } catch (err) {
