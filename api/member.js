@@ -1,4 +1,4 @@
-import express, { response } from "express";
+import express from "express";
 import pool from "../db/pool.js";
 import jwt from 'jsonwebtoken';
 const SECRET_KEY = "ABCD_key"
@@ -44,9 +44,6 @@ const router = express.Router();
     router.post('/login', async (req, res) => {
     try {
         const {userId, userPw} = req.body;
-
-        console.log("LG 비번:", userId);
-        console.log("DB 비번:", userPw);
 
         const sql = "SELECT userId, userName, userPw FROM member where userId = ?";
         const [rows] = await pool.query(sql, [userId])
