@@ -1,5 +1,7 @@
-import express from "express";
+import express, { response } from "express";
 import pool from "../db/pool.js";
+import jwt from 'jsonwebtoken';
+const SECRET_KEY = "ABCD_key"
 
 const router = express.Router();
 
@@ -38,11 +40,37 @@ const router = express.Router();
     });
     
   
-    //2. 글 리스트
-    router.get('/', async (req, res) => {
+    //3. 로그인
+    router.post('/login', async (req, res) => {
     try {
-        const [rows] = await pool.query("SELECT * FROM board");
-        res.json(rows);
+        const {userId, userPw} = req.body;
+
+        console.log("LG 비번:", userId);
+        console.log("DB 비번:", userPw);
+
+        const sql = "SELECT userId, userName, userPw FROM member where userId = ?";
+        const [rows] = await pool.query(sql, [userId])
+
+        // 아이디 확인
+        if(rows.length === 0){return res.json({ success: false, message: "아이디를 확인해주세요."})}
+        
+        // 비밀번호확인
+        if(rows[0].userPw != userPw){
+          return res.json({ success: false, message: "비밀번호를 확인해주세요."})
+        }
+        else{
+          const accessToken = jwt.sign(
+            {userId: rows[0].userId, userName: rows[0].userName},
+            SECRET_KEY,
+            { expiresIn: '24h'}
+          );
+
+          res.json({
+            success: true, accessToken, userId: rows[0].userId, userName: rows[0].userName 
+          });
+        }
+
+
     } catch (err) {
         res.status(500).send(err);
     }
