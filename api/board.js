@@ -1,5 +1,6 @@
 import express from "express";
 import pool from "../db/pool.js";
+import authMiddleware from "../db/authMiddleware.js"
 
 const router = express.Router();
 
@@ -20,8 +21,9 @@ router.post('/', async (req, res) => {
 });
   
   //2. 글 리스트
-  router.get('/', async (req, res) => {
+  router.get('/', authMiddleware, async (req, res) => {
     try {
+      const user = req.user.midx; 
       const [rows] = await pool.query("SELECT * FROM board");
       res.json(rows);
     } catch (err) {
