@@ -5,13 +5,22 @@ import authMiddleware from "../db/authMiddleware.js"
 const router = express.Router();
 
 //1. 리스트 작성
-router.post('/', async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   try{
-    const { title, content } = req.body;
-    const sql = 'INSERT INTO board (title, content) VALUES (?, ?)';
+    
+    const authMidx = req.user.userMidx;//회원고유번호
+    const { userMidx, title, content } = req.body;
+
+    if (Number(userMidx) !== Number(authMidx)) {
+      return res.status(403).json({ 
+          message: "데이터 조작이 감지되었습니다. 올바른 경로로 접근하세요." 
+      });
+    }
+    
+    const sql = 'INSERT INTO board (midx, title, content) VALUES (?, ?, ?)';
     await pool.query(
       sql,
-      [title, content]
+      [userMidx, title, content]
     );
     
     res.send("등록 완료");
@@ -23,7 +32,6 @@ router.post('/', async (req, res) => {
   //2. 글 리스트
   router.get('/', authMiddleware, async (req, res) => {
     try {
-      const user = req.user.midx; 
       const [rows] = await pool.query("SELECT * FROM board");
       res.json(rows);
     } catch (err) {

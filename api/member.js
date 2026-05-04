@@ -57,13 +57,13 @@ const router = express.Router();
         }
         else{
           const accessToken = jwt.sign(
-            {midx: rows[0].midx, userId: rows[0].userId, userName: rows[0].userName},
+            {userMidx: rows[0].midx, userId: rows[0].userId, userName: rows[0].userName},
             SECRET_KEY,
             { expiresIn: '24h'}
           );
 
           res.json({
-            success: true, accessToken, userId: rows[0].userId, userName: rows[0].userName, midx: rows[0].midx 
+            success: true, accessToken, userId: rows[0].userId, userName: rows[0].userName, userMidx: rows[0].midx 
           });
         }
 
