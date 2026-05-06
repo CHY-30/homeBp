@@ -45,7 +45,7 @@ const router = express.Router();
     try {
         const {userId, userPw} = req.body;
 
-        const sql = "SELECT userId, userName, userPw FROM member where userId = ?";
+        const sql = "SELECT midx, userId, userName, userPw FROM member where userId = ?";
         const [rows] = await pool.query(sql, [userId])
 
         // 아이디 확인
@@ -57,13 +57,13 @@ const router = express.Router();
         }
         else{
           const accessToken = jwt.sign(
-            {userId: rows[0].userId, userName: rows[0].userName},
+            {userMidx: rows[0].midx, userId: rows[0].userId, userName: rows[0].userName},
             SECRET_KEY,
             { expiresIn: '24h'}
           );
 
           res.json({
-            success: true, accessToken, userId: rows[0].userId, userName: rows[0].userName 
+            success: true, accessToken, userId: rows[0].userId, userName: rows[0].userName, userMidx: rows[0].midx 
           });
         }
 
