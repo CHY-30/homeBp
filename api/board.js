@@ -25,9 +25,26 @@ router.post('/', authMiddleware, async (req, res) => {
   
   //2. 글 리스트
   router.get('/', authMiddleware, async (req, res) => {
+
+    const page = parseInt(req.query.page) || 1; // 기본1페이지
+    const size = parseInt(req.query.size) || 10; //기본10개
+    const offset = (page - 1) * size;
+
     try {
-      const [rows] = await pool.query("SELECT * FROM board");
-      res.json(rows);
+      // 전체수
+      const [totalCntRow] = await pool.query("SELECT COUNT(*) as total FROM board");
+      const totalCnt = totalCntRow[0].total;
+      
+      // 리스트
+      const [rows] = await pool.query("SELECT * FROM board order by id desc LIMIT ? OFFSET ?",[size, offset]);
+
+      res.json({
+        data: rows,
+        totalCnt,
+        totalPages: Math.ceil(totalCnt / size),
+        currentPage: page
+      });
+
     } catch (err) {
       res.status(500).send(err);
     }
