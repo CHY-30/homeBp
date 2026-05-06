@@ -8,14 +8,8 @@ const router = express.Router();
 router.post('/', authMiddleware, async (req, res) => {
   try{
     
-    const authMidx = req.user.userMidx;//회원고유번호
+    //const authMidx = req.user.userMidx;//회원고유번호
     const { userMidx, title, content } = req.body;
-
-    if (Number(userMidx) !== Number(authMidx)) {
-      return res.status(403).json({ 
-          message: "데이터 조작이 감지되었습니다. 올바른 경로로 접근하세요." 
-      });
-    }
     
     const sql = 'INSERT INTO board (midx, title, content) VALUES (?, ?, ?)';
     await pool.query(
@@ -40,33 +34,57 @@ router.post('/', authMiddleware, async (req, res) => {
   });
   
   // 3. 글 수정 (UPDATE)
-  router.put("/:id", async (req, res) => {
+  router.put("/:id", authMiddleware, async (req, res) => {
     try {
+
+      const authMidx = req.user.userMidx;//회원고유번호
       const { title, content } = req.body;
       const id = req.params.id;
   
-      await pool.query(
-        "UPDATE board SET title=?, content=? WHERE id=?",
-        [title, content, id]
+      const [ bmc ] = await pool.query(
+        "UPDATE board SET title=?, content=? WHERE id=? and midx=?",
+        [title, content, id, authMidx]
       );
-  
-      res.send("수정 완료");
+      
+      if(bmc.affectedRows === 0){
+        return res.status(555).json({ 
+          success: false, 
+          message: "본인이 작성한 글만 수정할 수 있거나, 게시글이 존재하지 않습니다." 
+        });
+      }
+
+      return res.status(200).json({ 
+        success: true, 
+        message: "성공적으로 수정되었습니다." 
+      });
+
     } catch (err) {
       res.status(500).send(err);
     }
   });
   
   // 4. 글 삭제 (DELETE)
-  router.delete("/:id", async (req, res) => {
+  router.delete("/:id", authMiddleware, async (req, res) => {
     try {
       const id = req.params.id;
+      const authMidx = req.user.userMidx;//회원고유번호
   
-      await pool.query(
-        "DELETE FROM board WHERE id=?",
-        [id]
+      const [ bmc ] = await pool.query(
+        "DELETE FROM board WHERE id=? and midx=?",
+        [id, 1111]
       );
+
+      if(bmc.affectedRows === 0){
+        return res.status(555).json({ 
+          success: false, 
+          message: "본인이 작성한 글만 수정할 수 있거나, 게시글이 존재하지 않습니다." 
+        });
+      }
   
-      res.send("삭제 완료");
+      return res.status(200).json({ 
+        success: true, 
+        message: "삭제되었습니다." 
+      });
     } catch (err) {
       res.status(500).send(err);
     }
