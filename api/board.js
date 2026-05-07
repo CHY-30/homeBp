@@ -27,16 +27,53 @@ router.post('/', authMiddleware, async (req, res) => {
   router.get('/', authMiddleware, async (req, res) => {
 
     const page = parseInt(req.query.page) || 1; // 기본1페이지
-    const size = parseInt(req.query.size) || 10; //기본10개
+    const size = parseInt(req.query.size) || 5; //기본10개
     const offset = (page - 1) * size;
+    const sType = req.query.sType; //검색타입
+    const sText = req.query.sText; //검색어
 
     try {
+      let cntSql = "SELECT COUNT(*) as total FROM board WHERE 1=1"
+      let sql = "SELECT * FROM board where 1=1"
+      let queryParams = [];
+      
+      if(sText !== "" && sText.trim() !== ""){
+        const sSText = `%${sText}%`;
+        if(sType === "title"){
+          const wheres = " and title LIKE ?";
+          cntSql += wheres;
+          sql += wheres;     
+          queryParams.push(sSText);     
+        }
+        else if(sType === "content"){
+          const wheres = " and content LIKE ?";
+          cntSql += wheres;
+          sql += wheres;     
+          queryParams.push(sSText);     
+        }
+        else if(sType === "all"){
+          const wheres = " and (content LIKE ? OR title LIKE ?)";
+          cntSql += wheres;
+          sql += wheres;     
+          queryParams.push(sSText, sSText);     
+        }
+      }
+
+
+      sql += " order by id desc LIMIT ? OFFSET ? "
+      const dataParams = [...queryParams, size, offset];
+
+      console.log(sql);
+      console.log(dataParams);
+      console.log(cntSql);
+      console.log(queryParams);
+
       // 전체수
-      const [totalCntRow] = await pool.query("SELECT COUNT(*) as total FROM board");
+      const [totalCntRow] = await pool.query(cntSql, queryParams);
       const totalCnt = totalCntRow[0].total;
       
       // 리스트
-      const [rows] = await pool.query("SELECT * FROM board order by id desc LIMIT ? OFFSET ?",[size, offset]);
+      const [rows] = await pool.query(sql, dataParams);
 
       res.json({
         data: rows,
@@ -88,7 +125,7 @@ router.post('/', authMiddleware, async (req, res) => {
   
       const [ bmc ] = await pool.query(
         "DELETE FROM board WHERE id=? and midx=?",
-        [id, 1111]
+        [id, authMidx]
       );
 
       if(bmc.affectedRows === 0){
