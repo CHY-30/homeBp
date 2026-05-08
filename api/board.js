@@ -62,11 +62,13 @@ router.post('/', authMiddleware, async (req, res) => {
 
       sql += " order by id desc LIMIT ? OFFSET ? "
       const dataParams = [...queryParams, size, offset];
-
+      
+      /*
       console.log(sql);
       console.log(dataParams);
       console.log(cntSql);
       console.log(queryParams);
+      */
 
       // 전체수
       const [totalCntRow] = await pool.query(cntSql, queryParams);
