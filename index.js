@@ -1,3 +1,4 @@
+import "./db/env.js"
 import pool from "./db/pool.js";
 import express from "express";
 import cors from "cors";
@@ -5,8 +6,9 @@ import cors from "cors";
 import boardRouter from "./api/board.js";
 import memberRouter from "./api/member.js";
 
+
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT;
 app.use(cors());
 app.use(express.json());
 
