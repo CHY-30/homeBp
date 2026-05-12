@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-const SECRET_KEY = "ABCD_key"
+const SECRET_KEY = process.env.SECRET_KEY
 
 const authMiddleware = (req, res, next) => {
   // 1. 헤더에서 토큰 추출 (보통 'Bearer 토큰문자열' 형식)
