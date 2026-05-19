@@ -1,8 +1,8 @@
-import express from "express";
+import express, { response } from "express";
 import pool from "../db/pool.js";
 import jwt from 'jsonwebtoken';
-const SECRET_KEY = "ABCD_key"
-
+const SECRET_KEY = process.env.SECRET_KEY;
+const SECRET_REKEY = process.env.SECRET_REKEY;
 const router = express.Router();
 
     //1. 회원가입
@@ -48,22 +48,30 @@ const router = express.Router();
         const sql = "SELECT midx, userId, userName, userPw FROM member where userId = ?";
         const [rows] = await pool.query(sql, [userId])
 
+
         // 아이디 확인
-        if(rows.length === 0){return res.json({ success: false, message: "아이디를 확인해주세요."})}
+        if(rows.length === 0){ return res.json({ success: false, message: "아이디를 확인해주세요."}) }
         
         // 비밀번호확인
         if(rows[0].userPw != userPw){
-          return res.json({ success: false, message: "비밀번호를 확인해주세요."})
+           return res.json({success: false, message: "비밀번호를 확인해주세요."}) 
         }
         else{
           const accessToken = jwt.sign(
             {userMidx: rows[0].midx, userId: rows[0].userId, userName: rows[0].userName},
             SECRET_KEY,
-            { expiresIn: '24h'}
+            { expiresIn: '20m'}
+          );
+
+          //리플레시 토큰
+          const refreshToken = jwt.sign(
+            {userMidx: rows[0].midx},
+            SECRET_REKEY,
+            { expiresIn: '30d'}
           );
 
           res.json({
-            success: true, accessToken, userId: rows[0].userId, userName: rows[0].userName, userMidx: rows[0].midx 
+            success: true, accessToken, userId: rows[0].userId, userName: rows[0].userName, userMidx: rows[0].midx, refreshToken 
           });
         }
 
@@ -73,60 +81,45 @@ const router = express.Router();
     }
     });
 
+    //4. 리플레시토큰
+    router.post('/refresh', async (req, res) => {
 
-    // 3. 글 수정 (UPDATE)
-    router.put("/:id", async (req, res) => {
-    try {
-        const { title, content } = req.body;
-        const id = req.params.id;
+      const { oldRefreshToken } = req.body;
 
-        await pool.query(
-        "UPDATE board SET title=?, content=? WHERE id=?",
-        [title, content, id]
+      if (!oldRefreshToken) return res.status(401).json({ message: "리프레시 토큰이 없습니다." });
+      
+      try {
+
+        const decoded = jwt.verify(oldRefreshToken, SECRET_REKEY);
+
+        const sql = "SELECT midx, userId, userName FROM member WHERE midx = ?";
+        const [rows] = await pool.query(sql, [decoded.userMidx]);
+
+        const newaccessToken = jwt.sign(
+          {userMidx: rows[0].midx, userId: rows[0].userId, userName: rows[0].userName},
+          SECRET_KEY,
+          { expiresIn: '20m'}
         );
 
-        res.send("수정 완료");
-    } catch (err) {
-        res.status(500).send(err);
-    }
-    });
-  
+        const newrefreshToken = jwt.sign(
+          {userMidx: rows[0].midx},
+          SECRET_REKEY,
+          { expiresIn: '30d'}
+        );
 
-  // 4. 글 삭제 (DELETE)
-  router.delete("/:id", async (req, res) => {
-    try {
-      const id = req.params.id;
-  
-      await pool.query(
-        "DELETE FROM board WHERE id=?",
-        [id]
-      );
-  
-      res.send("삭제 완료");
-    } catch (err) {
-      res.status(500).send(err);
-    }
-  });
+        console.log(newrefreshToken);
 
-  // 5. 글 상세
-  router.get('/:id', async (req, res) => {
-    try {
-      const { id } = req.params;
-
-      const [rows] = await pool.query(
-        "SELECT * FROM board WHERE id = ?",
-        [id]
-      );
-
-      if (rows.length === 0) {
-        return res.status(404).send("게시글 없음");
+        res.json({
+          success: true, newaccessToken, userId: rows[0].userId, userName: rows[0].userName, userMidx: rows[0].midx, newrefreshToken 
+        });
       }
 
-      res.json(rows[0]);
-    } catch (err) {
-      res.status(500).send(err);
+      catch (err) {
+      // 30일짜리 토큰마저 가짜거나 만료된 경우
+      return res.status(403).json({ message: "리프레시 토큰이 유효하지 않습니다." });
     }
-  });
 
+
+    });
 
   export default router;
